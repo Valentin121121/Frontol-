@@ -1,0 +1,425 @@
+// Функции для печати отчётов и копии чека сбербанка на ККМ Атол
+//Контрольная лента
+//---------------------------------------------------------------------------------------------------------------------------
+   var sbrf = null;
+   var opResultCode;
+   var MyCheque;
+   var par;
+   function controlt(){
+
+   if (frontol.actions.showMessage("       Хотите напечатать контрольную ленту?        \n\n          ДА (Enter)             НЕТ (Esc)\n                               ",
+                             Button.YesNo + Icon.Question) == DialogResult.Yes)
+   {
+
+       try{
+        sbrf = new ActiveXObject("SBRFSRV.Server");
+
+        //[Контрольная лента]
+        var opResultCode = sbrf.NFun(7000);
+        MyCheque = sbrf.GParamString("Cheque");
+
+        sbrf.clear();
+        }
+        catch (e) {
+        sbrf = null;
+       frontol.actions.showMessage(e.message);
+        }
+        if (sbrf==null)
+        {
+       frontol.actions.showMessage(e.message);
+
+         return;
+        }
+
+
+
+
+        frontol.userValues.get("PrinterConnectionAddress");
+        //frontol.actions.showMessage(frontol.userValues.get("PrinterConnectionAddress")); //адрес подключения
+
+        if (frontol.userValues.get("PrinterConnectionAddress") == "" || "555") //ввести адрес подключения
+
+{
+
+EnterGlobalParameter("PrinterConnectionAddress","Введите IP адрес для подключения по TCP\IP \n или введите в поле строку: USB для подключения ККМ через USB \n или обратитесь к системному администратору");
+
+}else{
+frontol.actions.showError("Ввод отменен");
+}
+
+function EnterGlobalParameter(param, header)
+{
+
+var headerString = "Вводимый параметр: " + header;
+
+var newValue = frontol.actions.inputString(headerString, frontol.userValues.get(param));
+if (newValue == null)
+return false;
+
+frontol.userValues.set(param, newValue);
+return true;
+}
+
+
+ var parameter_USB = "USB";
+ var parameter_USB2 = "usb";
+ var parameter_USB3 = "Usb";
+ USB_input = frontol.userValues.get("PrinterConnectionAddress");
+// frontol.actions.showMessage(USB_input);
+   if(USB_input == parameter_USB || USB_input == parameter_USB2 || USB_input == parameter_USB3){
+                var fptr = new ActiveXObject("AddIn.Fptr10"); //Создаем СОМ объект
+                portAddress = fptr.getSingleSetting(fptr.LIBFPTR_SETTING_IPPORT);
+                fptr.setSingleSetting(fptr.LIBFPTR_SETTING_PORT, fptr.LIBFPTR_PORT_USB);
+                fptr.setSingleSetting(fptr.LIBFPTR_SETTING_IPPORT, portAddress);
+                fptr.applySingleSettings(); //управлять настройками драйвера
+                fptr.open(); //открываем соединение с кассой
+                var isOpenedUSB = fptr.isOpened();
+                if(isOpenedUSB == true){   //проверяем есть ли связь с ккт
+
+                               fptr.setParam(fptr.LIBFPTR_PARAM_TEXT, MyCheque);  //печать из переменной
+                               fptr.printText();
+                               fptr.printCliche(); //отрезка
+                               fptr.report(); //печать нужна для работы отрезчика
+                                fptr.close(); //Закрываем соединение
+                                return false;
+                }else{
+           frontol.actions.showMessage("Нет связи с ККМ по USB");
+        }
+   }else{
+       frontol.actions.showMessage("Введёные данные не совпадают c подключением по USB");
+        }
+//----------------------------------------------------------------------------------------------
+if(frontol.userValues.get("PrinterConnectionAddress")!== "" || undefined || null || parameter_USB || parameter_USB2 || parameter_USB3){
+
+       var fptr = new ActiveXObject("AddIn.Fptr10"); //Создаем СОМ объект
+       portAddress = fptr.getSingleSetting(fptr.LIBFPTR_SETTING_IPPORT);
+     //frontol.actions.showMessage("тут что то есть"+ frontol.userValues.get("PrinterConnectionAddress"));
+     fptr.setSingleSetting(fptr.LIBFPTR_SETTING_PORT, fptr.LIBFPTR_PORT_TCPIP); // по TCPIP
+        fptr.setSingleSetting(fptr.LIBFPTR_SETTING_IPADDRESS, frontol.userValues.get("PrinterConnectionAddress"));  //IP адрес ККМ
+        fptr.setSingleSetting(fptr.LIBFPTR_SETTING_IPPORT, portAddress);
+         fptr.applySingleSettings(); //управлять настройками драйвера
+        fptr.open(); //открываем соединение с кассой
+        var isOpened = fptr.isOpened();
+        if(isOpened == true){
+        fptr.setParam(fptr.LIBFPTR_PARAM_TEXT, MyCheque);  //печать через переменную
+        fptr.printText();
+        fptr.printCliche(); //отрезка
+        fptr.report(); //печать
+        fptr.close(); //Закрываем соединение
+           }else if(isOpened == false){
+             frontol.actions.showMessage("IP:  " + frontol.userValues.get("PrinterConnectionAddress") + "  введен не верно или отсутствует соеденение с ККТ \n введите IP или обратитесь к системному администратору");
+              while(true){
+           if (EnterGlobalParameter("PrinterConnectionAddress","Введите IP адрес ККМ или обратитесь к системному администратору"))
+                                          {
+                                          fptr.setSingleSetting(fptr.LIBFPTR_SETTING_PORT, fptr.LIBFPTR_PORT_TCPIP); // по TCPIP
+                                          fptr.setSingleSetting(fptr.LIBFPTR_SETTING_IPADDRESS, frontol.userValues.get("PrinterConnectionAddress"));  //IP адрес ККМ
+                                          fptr.setSingleSetting(fptr.LIBFPTR_SETTING_IPPORT, portAddress);
+                                          fptr.applySingleSettings(); //управлять настройками драйвера
+                                          fptr.open(); //открываем соединение с кассой
+                                          var isOpened = fptr.isOpened();
+                                                       if(isOpened == true){
+                                                       fptr.setParam(fptr.LIBFPTR_PARAM_TEXT, MyCheque);  //ПЕЧАТЬ НАПРЯМУЮ
+                                                       fptr.printText();
+                                                       //fptr.printCliche(); //отрезка
+                                                       fptr.report(); //печать
+                                                       fptr.close(); //Закрываем соединение
+                                                       break;
+                                                       }
+                                          }else{
+                                          fptr.close();
+                                           break;
+                                          }
+                             }
+
+           }
+
+ }
+
+
+        }
+
+        }
+
+//---------------------------------------------------------------------------------------------------------------------------
+
+ //Копия чека
+//---------------------------------------------------------------------------------------------------------------------------
+   var sbrf = null;
+   var opResultCode;
+   var MyCheque;
+   var par;
+   function сopyofСheck(){
+
+   if (frontol.actions.showMessage("       Хотите напечатать копию чека?        \n\n          ДА (Enter)             НЕТ (Esc)\n                               ",
+                             Button.YesNo + Icon.Question) == DialogResult.Yes)
+   {
+
+       try{
+        sbrf = new ActiveXObject("SBRFSRV.Server");
+
+        //[Копия чека]
+        var opResultCode = sbrf.NFun(7001);
+        MyCheque = sbrf.GParamString("Cheque");
+
+        sbrf.clear();
+        }
+        catch (e) {
+        sbrf = null;
+       frontol.actions.showMessage(e.message);
+        }
+        if (sbrf==null)
+        {
+       frontol.actions.showMessage(e.message);
+
+         return;
+        }
+
+
+
+        frontol.userValues.get("PrinterConnectionAddress");
+        //frontol.actions.showMessage(frontol.userValues.get("PrinterConnectionAddress")); //адрес подключения
+
+        if (frontol.userValues.get("PrinterConnectionAddress") == "" || "555") //ввести адрес подключения
+
+{
+
+EnterGlobalParameter("PrinterConnectionAddress","Введите IP адрес для подключения по TCP\IP \n или введите в поле строку: USB для подключения ККМ через USB \n или обратитесь к системному администратору");
+
+}else{
+frontol.actions.showError("Ввод отменен");
+}
+
+function EnterGlobalParameter(param, header)
+{
+
+var headerString = "Вводимый параметр: " + header;
+
+var newValue = frontol.actions.inputString(headerString, frontol.userValues.get(param));
+if (newValue == null)
+return false;
+
+frontol.userValues.set(param, newValue);
+return true;
+}
+
+ var parameter_USB = "USB";
+ var parameter_USB2 = "usb";
+ var parameter_USB3 = "Usb";
+ USB_input = frontol.userValues.get("PrinterConnectionAddress");
+// frontol.actions.showMessage(USB_input);
+   if(USB_input == parameter_USB || USB_input == parameter_USB2 || USB_input == parameter_USB3){
+                var fptr = new ActiveXObject("AddIn.Fptr10"); //Создаем СОМ объект
+                portAddress = fptr.getSingleSetting(fptr.LIBFPTR_SETTING_IPPORT);
+                fptr.setSingleSetting(fptr.LIBFPTR_SETTING_PORT, fptr.LIBFPTR_PORT_USB);
+                fptr.setSingleSetting(fptr.LIBFPTR_SETTING_IPPORT, portAddress);
+                fptr.applySingleSettings(); //управлять настройками драйвера
+                fptr.open(); //открываем соединение с кассой
+                var isOpenedUSB = fptr.isOpened();
+                if(isOpenedUSB == true){   //проверяем есть ли связь с ккт
+
+                               fptr.setParam(fptr.LIBFPTR_PARAM_TEXT, MyCheque);  //печать из переменной
+                               fptr.printText();
+                               fptr.printCliche(); //отрезка
+                               fptr.report(); //печать нужна для работы отрезчика
+                                fptr.close(); //Закрываем соединение
+                                return false;
+                }else{
+           frontol.actions.showMessage("Нет связи с ККМ по USB");
+        }
+   }else{
+       frontol.actions.showMessage("Введёные данные не совпадают c подключением по USB");
+        }
+//----------------------------------------------------------------------------------------------
+if(frontol.userValues.get("PrinterConnectionAddress")!== "" || undefined || null || parameter_USB || parameter_USB2 || parameter_USB3){
+
+       var fptr = new ActiveXObject("AddIn.Fptr10"); //Создаем СОМ объект
+       portAddress = fptr.getSingleSetting(fptr.LIBFPTR_SETTING_IPPORT);
+     //frontol.actions.showMessage("тут что то есть"+ frontol.userValues.get("PrinterConnectionAddress"));
+     fptr.setSingleSetting(fptr.LIBFPTR_SETTING_PORT, fptr.LIBFPTR_PORT_TCPIP); // по TCPIP
+        fptr.setSingleSetting(fptr.LIBFPTR_SETTING_IPADDRESS, frontol.userValues.get("PrinterConnectionAddress"));  //IP адрес ККМ
+        fptr.setSingleSetting(fptr.LIBFPTR_SETTING_IPPORT, portAddress);
+         fptr.applySingleSettings(); //управлять настройками драйвера
+        fptr.open(); //открываем соединение с кассой
+        var isOpened = fptr.isOpened();
+        if(isOpened == true){
+        fptr.setParam(fptr.LIBFPTR_PARAM_TEXT, MyCheque);  //печать через переменную
+        fptr.printText();
+        fptr.printCliche(); //отрезка
+        fptr.report(); //печать
+        fptr.close(); //Закрываем соединение
+           }else if(isOpened == false){
+             frontol.actions.showMessage("IP:  " + frontol.userValues.get("PrinterConnectionAddress") + "  введен не верно или отсутствует соеденение с ККТ \n введите IP или обратитесь к системному администратору");
+              while(true){
+           if (EnterGlobalParameter("PrinterConnectionAddress","Введите IP адрес ККМ или обратитесь к системному администратору"))
+                                          {
+                                          fptr.setSingleSetting(fptr.LIBFPTR_SETTING_PORT, fptr.LIBFPTR_PORT_TCPIP); // по TCPIP
+                                          fptr.setSingleSetting(fptr.LIBFPTR_SETTING_IPADDRESS, frontol.userValues.get("PrinterConnectionAddress"));  //IP адрес ККМ
+                                          fptr.setSingleSetting(fptr.LIBFPTR_SETTING_IPPORT, portAddress);
+                                          fptr.applySingleSettings(); //управлять настройками драйвера
+                                          fptr.open(); //открываем соединение с кассой
+                                          var isOpened = fptr.isOpened();
+                                                       if(isOpened == true){
+                                                       fptr.setParam(fptr.LIBFPTR_PARAM_TEXT, MyCheque);  //ПЕЧАТЬ НАПРЯМУЮ
+                                                       fptr.printText();
+                                                       fptr.printCliche(); //отрезка
+                                                       fptr.report(); //печать
+                                                       fptr.close(); //Закрываем соединение
+                                                       break;
+                                                       }
+                                          }else{
+                                           break;
+                                          }
+
+                             }
+
+           }
+
+ }
+
+
+        }
+
+        }
+
+//---------------------------------------------------------------------------------------------------------------------------
+
+//Итоги операции по терм
+//---------------------------------------------------------------------------------------------------------------------------
+   var sbrf = null;
+   var opResultCode;
+   var MyCheque;
+   var par;
+   function resultsTerminalOperation(){
+
+   if (frontol.actions.showMessage("        Хотите напечатать итоги операций по терминалу?        \n\n          ДА (Enter)             НЕТ (Esc)\n                               ",
+                             Button.YesNo + Icon.Question) == DialogResult.Yes)
+   {
+
+       try{
+        sbrf = new ActiveXObject("SBRFSRV.Server");
+
+        //[Итоги операции по терм]
+        var opResultCode = sbrf.NFun(6002);
+        MyCheque = sbrf.GParamString("Cheque");
+
+        sbrf.clear();
+        }
+        catch (e) {
+        sbrf = null;
+       frontol.actions.showMessage(e.message);
+        }
+        if (sbrf==null)
+        {
+       frontol.actions.showMessage(e.message);
+
+         return;
+        }
+
+
+
+
+        frontol.userValues.get("PrinterConnectionAddress");
+        //frontol.actions.showMessage(frontol.userValues.get("PrinterConnectionAddress")); //адрес подключения
+
+        if (frontol.userValues.get("PrinterConnectionAddress") == "" || "555") //ввести адрес подключения
+
+{
+
+EnterGlobalParameter("PrinterConnectionAddress","Введите IP адрес для подключения по TCP\IP \n или введите в поле строку: USB для подключения ККМ через USB \n или обратитесь к системному администратору");
+
+}else{
+frontol.actions.showError("Ввод отменен");
+}
+
+function EnterGlobalParameter(param, header)
+{
+
+var headerString = "Вводимый параметр: " + header;
+
+var newValue = frontol.actions.inputString(headerString, frontol.userValues.get(param));
+if (newValue == null)
+return false;
+
+frontol.userValues.set(param, newValue);
+return true;
+}
+
+ var parameter_USB = "USB";
+ var parameter_USB2 = "usb";
+ var parameter_USB3 = "Usb";
+ USB_input = frontol.userValues.get("PrinterConnectionAddress");
+// frontol.actions.showMessage(USB_input);
+   if(USB_input == parameter_USB || USB_input == parameter_USB2 || USB_input == parameter_USB3){
+                var fptr = new ActiveXObject("AddIn.Fptr10"); //Создаем СОМ объект
+                portAddress = fptr.getSingleSetting(fptr.LIBFPTR_SETTING_IPPORT);
+                fptr.setSingleSetting(fptr.LIBFPTR_SETTING_PORT, fptr.LIBFPTR_PORT_USB);
+                fptr.setSingleSetting(fptr.LIBFPTR_SETTING_IPPORT, portAddress);
+                fptr.applySingleSettings(); //управлять настройками драйвера
+                fptr.open(); //открываем соединение с кассой
+                var isOpenedUSB = fptr.isOpened();
+                if(isOpenedUSB == true){   //проверяем есть ли связь с ккт
+
+                               fptr.setParam(fptr.LIBFPTR_PARAM_TEXT, MyCheque);  //печать из переменной
+                               fptr.printText();
+                               fptr.printCliche(); //отрезка
+                               fptr.report(); //печать нужна для работы отрезчика
+                                fptr.close(); //Закрываем соединение
+                                return false;
+                }else{
+           frontol.actions.showMessage("Нет связи с ККМ по USB");
+        }
+   }else{
+       frontol.actions.showMessage("Введёные данные не совпадают c подключением по USB");
+        }
+//----------------------------------------------------------------------------------------------
+if(frontol.userValues.get("PrinterConnectionAddress")!== "" || undefined || null || parameter_USB || parameter_USB2 || parameter_USB3){
+
+       var fptr = new ActiveXObject("AddIn.Fptr10"); //Создаем СОМ объект
+       portAddress = fptr.getSingleSetting(fptr.LIBFPTR_SETTING_IPPORT);
+     //frontol.actions.showMessage("тут что то есть"+ frontol.userValues.get("PrinterConnectionAddress"));
+     fptr.setSingleSetting(fptr.LIBFPTR_SETTING_PORT, fptr.LIBFPTR_PORT_TCPIP); // по TCPIP
+        fptr.setSingleSetting(fptr.LIBFPTR_SETTING_IPADDRESS, frontol.userValues.get("PrinterConnectionAddress"));  //IP адрес ККМ
+        fptr.setSingleSetting(fptr.LIBFPTR_SETTING_IPPORT, portAddress);
+         fptr.applySingleSettings(); //управлять настройками драйвера
+        fptr.open(); //открываем соединение с кассой
+        var isOpened = fptr.isOpened();
+        if(isOpened == true){
+        fptr.setParam(fptr.LIBFPTR_PARAM_TEXT, MyCheque);  //печать через переменную
+        fptr.printText();
+        fptr.printCliche(); //отрезка
+        fptr.report(); //печать
+        fptr.close(); //Закрываем соединение
+           }else if(isOpened == false){
+             frontol.actions.showMessage("IP:  " + frontol.userValues.get("PrinterConnectionAddress") + "  введен не верно или отсутствует соеденение с ККТ \n введите IP или обратитесь к системному администратору");
+              while(true){
+           if (EnterGlobalParameter("PrinterConnectionAddress","Введите IP адрес ККМ или обратитесь к системному администратору"))
+                                          {
+                                          fptr.setSingleSetting(fptr.LIBFPTR_SETTING_PORT, fptr.LIBFPTR_PORT_TCPIP); // по TCPIP
+                                          fptr.setSingleSetting(fptr.LIBFPTR_SETTING_IPADDRESS, frontol.userValues.get("PrinterConnectionAddress"));  //IP адрес ККМ
+                                          fptr.setSingleSetting(fptr.LIBFPTR_SETTING_IPPORT, portAddress);
+                                          fptr.applySingleSettings(); //управлять настройками драйвера
+                                          fptr.open(); //открываем соединение с кассой
+                                          var isOpened = fptr.isOpened();
+                                                       if(isOpened == true){
+                                                       fptr.setParam(fptr.LIBFPTR_PARAM_TEXT, MyCheque);  //ПЕЧАТЬ НАПРЯМУЮ
+                                                       fptr.printText();
+                                                       fptr.printCliche(); //отрезка
+                                                       fptr.report(); //печать
+                                                       fptr.close(); //Закрываем соединение
+                                                       break;
+                                                       }
+                                          }else{
+                                           break;
+                                          }
+                             }
+
+           }
+
+ }
+
+
+        }
+
+        }
+
+//---------------------------------------------------------------------------------------------------------------------------
